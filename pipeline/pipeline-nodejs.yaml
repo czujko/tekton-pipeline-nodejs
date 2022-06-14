@@ -1,0 +1,98 @@
+#steps:
+#  - fetch repo
+#  - install dependencies
+#  - run unit tests
+#  - sonar
+#  - build image with kaniko
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: pipeline-nodejs
+spec:
+  params:
+  - name: repo-url
+    type: string
+  - name: branch-name
+    type: string
+  - name: image-version
+    type: string
+  workspaces:
+  - name: nodejs-workspace
+  - name: basic-auth-workspace
+  - name: sonar-settings
+#  - name: ssh-creds
+#  - name: dockerconfig     
+  tasks:
+    - name: git
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: nodejs-workspace
+        # - name: ssh-directory
+        #   workspace: ssh-creds
+        - name: basic-auth
+          workspace: basic-auth-workspace
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: subdirectory
+          value: ""
+        - name: revision
+          value: $(params.branch-name)
+        - name: deleteExisting
+          value: "true"
+    - name: install-dependencies
+      taskRef:
+        name: npm
+      runAfter:
+        - git
+      workspaces:
+        - name: source
+          workspace: nodejs-workspace 
+      params: 
+        - name: ARGS
+          value: 
+            - install
+    - name: unit-tests
+      taskRef:
+        name: npm
+      runAfter:
+        - install-dependencies
+      workspaces:
+      - name: source
+        workspace: nodejs-workspace 
+      params: 
+        - name: ARGS
+          value: 
+            - test
+    - name: sonar-scanner
+      taskRef:
+        name: sonarqube-scanner
+      runAfter:
+        - unit-tests
+      workspaces:
+        - name: source
+          workspace: nodejs-workspace
+        - name: sonar-settings
+          workspace: sonar-settings
+      params:
+        - name: SONAR_HOST_URL
+          value: https://sonarcloud.io
+        - name: SONAR_PROJECT_KEY
+          value: com.neoris.ddc.devsecops.aws.web-nodejs          
+    - name: build-image
+      taskRef:
+        name: kaniko
+      workspaces:
+        - name: source
+          workspace: nodejs-workspace
+      params:
+        - name: IMAGE
+          value: "europe-west1-docker.pkg.dev/capable-conduit-348311/app-java/node-app:$(params.image-version)"
+        - name: DOCKERFILE
+          value: ./Dockerfile
+      runAfter:
+        - sonar-scanner
+

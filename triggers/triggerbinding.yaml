@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: bitbucket-binding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.push.changes[0].old.name)
+    - name: gitrepositoryurl
+      value: $(body.repository.links.html.href)
+    - name: image-version
+      value: $(extensions.truncate)

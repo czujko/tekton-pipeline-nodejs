@@ -1,0 +1,39 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: bitbucket-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: image-version
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: pipeline-run-nodejs-
+      spec:
+        pipelineRef:
+          name: pipeline-nodejs
+        workspaces:
+        - name: nodejs-workspace
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+        - name: basic-auth-workspace
+          secret:
+            secretName: basic-auth
+        - name: sonar-settings
+          configMap:
+            name: sonar-properties 
+        params:
+        - name: repo-url
+          value: $(tt.params.gitrepositoryurl)
+        - name: branch-name
+          value: $(tt.params.gitrevision)
+        - name: image-version
+          value: $(tt.params.image-version)

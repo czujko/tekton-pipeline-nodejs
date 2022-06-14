@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pipeline-run-nodejs
+spec:
+  pipelineRef:
+    name: pipeline-nodejs
+  workspaces:
+  - name: nodejs-workspace
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+  - name: ssh-creds
+    secret:
+      secretName: git-cred
+  - name: sonar-settings
+    configMap:
+      name: sonar-properties
+  - name: basic-auth-workspace
+    secret:
+      secretName: basic-auth
+  # - name: dockerconfig
+  #   secret:
+  #     secretName: docker-auth    
+  params:
+  - name: repo-url
+    value: git@bitbucket.org:raikjsgard/nodejs.git
+  - name: branch-name
+    value: master

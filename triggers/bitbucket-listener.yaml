@@ -1,0 +1,23 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: bitbucket-listener
+spec:
+  serviceAccountName: tekton-triggers-sa
+  triggers:
+    - name: bitbucket-triggers
+      interceptors:
+        - ref:
+            name: cel
+              # overlays:
+              #    - key: truncate
+              #    expression: "body.push.changes[0].commits[0].hash.truncate(7)"
+          params:
+          - name: overlays
+            value:
+            - key: truncate
+              expression: "body.push.changes[0].commits[0].hash.truncate(7)"    
+      bindings:
+        - ref: bitbucket-binding
+      template:
+        ref: bitbucket-template
